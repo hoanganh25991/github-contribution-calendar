@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Github contribution calendar</title>
+	<!-- <link rel="stylesheet" href="//cdn.jsdelivr.net/cal-heatmap/3.3.10/cal-heatmap.css" /> -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/cal-heatmap/3.3.10/cal-heatmap.css" />
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
+</head>
+<body>
+
+<div id='cal-heatmap'></div>
+<button id='cal-next'>></button>
+<div id='onClick-placeholder'></div>
+
+<!-- <script type="text/javascript" src="//d3js.org/d3.v3.min.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/cal-heatmap/3.3.10/cal-heatmap.min.js"></script> -->
+<script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/cal-heatmap/3.3.10/cal-heatmap.min.js"></script>
+<script>
+	// var datas = [
+	// 	{date: 946702811, value: 15},
+	// 	{date: 946702812, value: 25},
+	// 	{date: 946702813, value: 10}
+	// ];
+	// var parser = function(data) {
+	// 	var stats = {};
+	// 	for (var d in data) {
+	// 		stats[data[d].date] = data[d].value;
+	// 	}
+	// 	console.log(stats);
+	// 	return stats;
+	// };
+	 
+	var random = function(min, max){
+		return Math.floor((Math.random() * max) + min);
+	}
+
+	var dummydata = function(){
+		var year = 2016;
+		var months = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+		var dates = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+		var dumpdata = {};
+
+		for(var i = 0; i < 12; i++){
+			var times = random(0, 15);
+
+			for(var j = 0; j < times; j++){
+				let date = random(0, dates[i]);
+				var timestamp = Math.floor(new Date(2016, months[i], date).getTime() / 1000);
+				dumpdata[timestamp] = random(0, 100);
+			}
+		}
+
+		console.log(dumpdata);
+		return dumpdata;
+	};
+
+	var cal = new CalHeatMap();
+	cal.init({
+		itemSelector: "#cal-heatmap",
+		domain: "month",
+		subDomain: "day",
+		range: 12,
+		displayLegend: true,
+		domainDynamicDimension: true,
+		data: dummydata(),
+		tooltip: true,
+		start: new Date(2016, 0, 1),
+		legendHorizontalPosition: "right",
+		// afterLoadData: parser,
+		// subDomainTextFormat: "%d",
+		onClick: function(date, nb) {
+		$("#onClick-placeholder").html("You just clicked <br/>on <b>" +
+			date + "</b> <br/>with <b>" +
+			(nb === null ? "unknown" : nb) + "</b> items"
+		);
+	}
+	});
+
+	$('#cal-next').on('click', function(){
+		cal.next();
+	});
+
+	
+
+	
+</script>
+<script>document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')</script>
+</body>
+</html>

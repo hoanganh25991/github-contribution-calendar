@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>dc.js</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dc/1.7.5/dc.min.css">
+</head>
+<body>
+<!-- chart filter by year -->
+<div id="chart-ring-year" style="width:300px; height:300px">
+	<div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
+		<a href="javascript:yearRingChart.filterAll();dc.redrawAll();">reset</a>
+	</div>
+</div>
+<!-- chart filter by spend -->
+<div id="chart-hist-spend" style="width:300px; height:300px">
+	<div class="reset" style="visibility: hidden;">range: <span class="filter"></span>
+		<a href="javascript:spendHistChart.filterAll();dc.redrawAll();">reset</a>
+	</div>
+</div>
+<!-- chart filter by spender-name -->
+<div id="chart-row-spenders">
+	<div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
+		<a href="javascript:spenderRowChart.filterAll();dc.redrawAll();">reset</a>
+	</div>
+</div>
+
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.1/d3.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter/1.3.12/crossfilter.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/dc/1.7.5/dc.min.js"></script>
+
+
+<script>
+// sample data
+var spendData = [
+    {Name: 'Mr A', Spent: '$40', Year: 2011},
+    {Name: 'Mr A', Spent: '$45', Year: 2011},
+    {Name: 'Mr B', Spent: '$47', Year: 2011},
+    {Name: 'Mr B', Spent: '$12', Year: 2011},
+    {Name: 'Mr B', Spent: '$14', Year: 2011},
+    {Name: 'Mr C', Spent: '$45', Year: 2011},
+    {Name: 'Mr A', Spent: '$76', Year: 2012},
+    {Name: 'Mr B', Spent: '$27', Year: 2012},
+    {Name: 'Mr C', Spent: '$23', Year: 2012},
+    {Name: 'Mr A', Spent: '$21', Year: 2012},
+    {Name: 'Mr B', Spent: '$52', Year: 2013},
+    {Name: 'Mr C', Spent: '$36', Year: 2013}
+    {Name: 'Mr A', Spent: '$38', Year: 2013}
+    {Name: 'Mr C', Spent: '$39', Year: 2013}
+];
+
+
+// normalize/parse data
+//'$40' > 40
+spendData.forEach(function(d) {
+    d.Spent = d.Spent.match(/\d+/);
+});
+console.log(spendData);
+
+// set crossfilter
+var ndx = crossfilter(spendData);
+
+//create dimension
+// var yearDim  = ndx.dimension(function(d) {return +d.Year;});
+var yearDim  = ndx.dimension(function(d) {return d.Year;});
+
+// var spendDim = ndx.dimension(function(d) {return Math.floor(d.Spent/10);});
+var spendDim = ndx.dimension(function(d) {return d.Spent;});
+
+var nameDim  = ndx.dimension(function(d) {return d.Name;});
+
+var spendPerYear = yearDim.group().reduceSum(function(d) {return +d.Spent;});
+
+var spendPerName = nameDim.group().reduceSum(function(d) {return +d.Spent;});
+
+// var spendHist    = spendDim.group().reduceCount();
+var spendHist    = spendDim.group().reduceSum(function(d) {return +d.Spent;});
+
+//graph, chart from single dc
+var yearRingChart   = dc.pieChart("#chart-ring-year"),
+    spendHistChart  = dc.barChart("#chart-hist-spend"),
+    spenderRowChart = dc.rowChart("#chart-row-spenders");
+
+//set option before draw
+yearRingChart
+	.dimension(yearDim)
+	.group(spendPerYear)
+	// .innerRadius(50)
+	.innerRadius(20)
+	.controlsUseVisibility(true);
+
+spendHistChart
+	.dimension(spendDim)
+	.group(spendHist)
+	.x(d3.scale.linear().domain([0,10]))
+	.elasticY(true)
+	.controlsUseVisibility(true);
+
+
+// spendHistChart.xAxis().tickFormat(function(d) {return d*10}); // convert back to base unit
+// spendHistChart.yAxis().ticks(2);
+
+spenderRowChart
+    .dimension(nameDim)
+    .group(spendPerName)
+    .elasticX(true)
+    .controlsUseVisibility(true);
+
+dc.renderAll();
+
+</script>
+</body>
+</html>
