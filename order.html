@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>cross filter order</title>
+    <title>order</title>
 </head>
 <body>
 
 <div class="container">
-	<div id="chart-ring-year" style="width:300px; height:300px">
-		<div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
-			<a href="javascript:byYearChart.filterAll();dc.redrawAll();">reset</a>
-		</div>
-	</div>
+    <div id="mainChart" style="width:800px; height:300px">
+        <div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
+            <a href="javascript:mainChart.filterAll();dc.redrawAll();">reset</a>
+        </div>
+    </div>
 
-	<div id="chart-hist-spend" style="width:300px; height:300px">
-		<div class="reset" style="visibility: hidden;">range: <span class="filter"></span>
-			<a href="javascript:spendHistChart.filterAll();dc.redrawAll();">reset</a>
-		</div>
-	</div>
+    <div id="chart-hist-spend" style="width:300px; height:300px">
+        <div class="reset" style="visibility: hidden;">range: <span class="filter"></span>
+            <a href="javascript:spendHistChart.filterAll();dc.redrawAll();">reset</a>
+        </div>
+    </div>
 
-	<div id="chart-row-spenders">
-		<div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
-			<a href="javascript:byDayChart.filterAll();dc.redrawAll();">reset</a>
-		</div>
-	</div>
+    <div id="chart-row-spenders">
+        <div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
+            <a href="javascript:byDayChart.filterAll();dc.redrawAll();">reset</a>
+        </div>
+    </div>
 </div>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
 <script type="text/javascript" src="js/d3.js"></script>
@@ -30,71 +30,103 @@
 <script type="text/javascript" src="js/dc.js"></script>
 
 <script>
-$.getJSON("dump-order.json", function(json) {
-    // console.log(json); // this will show the info it in firebug console
-});
-var dump = [
-	{name: 'anh', age: 24, job: 'web', birthday: '1991-09-25', commits: 198},
-	{name: 'thinh', age: 25, job: 'ios', birthday: '1992-04-21', commits: 18},
-	{name: 'phat', age: 24, job: 'android', birthday: '1993-06-25', commits: 32},
-	{name: 'huy', age: 25, job: 'web', birthday: '1991-07-21', commits: 123},
-	{name: 'anh', age: 25, job: 'web', birthday: '1993-09-13', commits: 45}
-];
+    var parseDate = function(mysqlTimestamp){
+//    // Split timestamp into [ Y, M, D, h, m, s ]
+//    var t = mysqlTimestamp.split(/[- :]/);
+//
+//    // Apply each element to the Date function
+//    return new Date(Date.UTC(t[0], t[1]-1, t[2], t[3], t[4], t[5]));
+        var debug = d3.time.format('%Y-%m-%d %H:%M:%S').parse(mysqlTimestamp);
+//    var debug = d3.time.format('%Y-%m-%d').parse('2016-07-28');
+//    console.log(debug);
+        return debug;
+    };
 
-dump.forEach(function(row){
-	var birthday = new Date(row.birthday);
-	// console.log(birthday);
-	row.year = birthday.getFullYear();
-	row.month = birthday.getMonth();
-	row.day = birthday.getDay();
-	console.log(row);
-});
+    function print_filter(f){
+        if(typeof(f.length) != "undefined"){
+        }else{
+        }
+        if(typeof(f.top) != "undefined"){
+            f = f.top(Infinity);
+        }else{
+        }
+        if(typeof(f.dimension) != "undefined"){
+            f = f.dimension(function(d){
+                return "";
+            }).top(Infinity);
+        }else{
+        }
+        console.log("(" + f.length + ") = " + JSON.stringify(f).replace("[", "[\n\t").replace(/}\,/g, "},\n\t")
+                                                  .replace("]", "\n]"));
+    }
 
-var dump2 = [];
+    var allInOne = function(json){
+//    console.log(json); // this will show the info it in firebug console
 
-dump.forEach(function(row){
-	var row2 = {};
-	row2.year = row.year;
-	row2.month = row.month;
-	row2.day = row.day;
-	row2.commits = row.commits;
-	dump2.push(row2);	
-});
 
-var byYearChart   = dc.pieChart("#chart-ring-year"),
-	// byMonthChart  = dc.barChart("#chart-hist-spend"),
-	byDayChart = dc.rowChart("#chart-row-spenders");
+        json.forEach(function(row){
+            row.created = parseDate(row.created_timestamp);
+            let createdAt = row.created;
+//        let createdAt = parseDate(row.created_timestamp);
 
-var filter = crossfilter(dump),
-// var filter = crossfilter(dump2),
-    yearDimension  = filter.dimension(function(row){return row.year});
-    monthDimension  = filter.dimension(function(row){return row.month});
-    dayDimension  = filter.dimension(function(row){return row.day});
-  
-    commitbyYear = yearDimension.group().reduceSum(function(d) {return +d.commits;}),
-    commitbyMonth = monthDimension.group().reduceSum(function(d) {return +d.commits;}),
-    commitbyDay = dayDimension.group().reduceSum(function(d) {return +d.commits;}),
+            row.year = createdAt.getFullYear();
 
-byYearChart
-    .dimension(yearDimension)
-    .group(commitbyYear)
-    // .innerRadius(50)
-    // .attr("x", 265 )
-    .controlsUseVisibility(true);
+            row.month = createdAt.getMonth() + 1;
 
-// byMonthChart
-// 	.dimension(monthDimension)
-// 	.group(commitbyMonth)
-// 	.elasticX(true)
-// 	.controlsUseVisibility(true);
+            row.date = createdAt.getDate();
+        });
 
-byDayChart
-	.dimension(dayDimension)
-	.group(commitbyDay)
-	.elasticX(true)
-	.controlsUseVisibility(true);
+        let testRow = json[4];
 
-dc.renderAll();
+        console.log(testRow);
+
+        var ndx = crossfilter(json);
+
+//    print_filter(json);
+
+        var dateDim = ndx.dimension(function(d){
+            return d.created;
+        });
+
+        var dateDimInAgust = dateDim.filter(function(d){
+//            console.log(d);
+            if(d.getMonth() == 8){
+                return d;
+            }
+        });
+
+        var dateRevenueSum = dateDimInAgust.group().reduceSum(function(d){
+            return Math.abs(d.total);
+        });
+
+        print_filter(dateRevenueSum);
+
+        var minDate = dateDimInAgust.bottom(1)[0].created;
+        var maxDate = dateDimInAgust.top(1)[0].created;
+
+//    var mainChart = dc.barChart('#mainChart');
+//    mainChart
+//            .dimension(dateDim)
+//            .x(d3.time.scale().domain([minDate,maxDate]))
+//            .group(dateRevenueSum);
+//
+
+        var chart = dc.lineChart('#mainChart');
+        chart
+                .width(4000)
+                .height(1600)
+                .dimension(dateDimInAgust)
+                .group(dateRevenueSum)
+                .x(d3.time.scale().domain([minDate,maxDate]));
+
+        dc.renderAll();
+
+    };
+
+    $.getJSON("dump-order.json", function(json){
+        allInOne(json);
+    });
+
 </script>
 </body>
 </html>
