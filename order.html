@@ -124,7 +124,24 @@
     };
 
     $.getJSON("dump-order.json", function(json){
-        allInOne(json);
+
+        var x = json.slice(1, 500);
+        x =JSON.stringify(x);
+        console.log(x);
+//        json.forEach(function(row){
+//            row.created = parseDate(row.created_timestamp);
+//        });
+//
+//        var ndx = crossfilter(json);
+//
+//        var dateDim = ndx.dimension(function(d){return d.created;});
+//
+////        var dateInAugust = dateDim.filterFunction(function(d){
+////            console.log(d);
+////            return d;
+////        });
+//
+//        print_filter(dateInAugust);
     });
 
 </script>
