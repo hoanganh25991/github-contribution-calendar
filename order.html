@@ -6,15 +6,15 @@
 <body>
 
 <div class="container">
-    <div id="mainChart" style="width:800px; height:300px">
+    <div id="mainChart">
         <div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
             <a href="javascript:mainChart.filterAll();dc.redrawAll();">reset</a>
         </div>
     </div>
 
-    <div id="chart-hist-spend" style="width:300px; height:300px">
+    <div id="weekendTotal">
         <div class="reset" style="visibility: hidden;">range: <span class="filter"></span>
-            <a href="javascript:spendHistChart.filterAll();dc.redrawAll();">reset</a>
+            <a href="javascript:weekendTotalChart.filterAll();dc.redrawAll();">reset</a>
         </div>
     </div>
 
@@ -95,11 +95,11 @@
             }
         });
 
-        var dateRevenueSum = dateDimInAgust.group().reduceSum(function(d){
+        var dateTotalSum = dateDimInAgust.group().reduceSum(function(d){
             return Math.abs(d.total);
         });
 
-        print_filter(dateRevenueSum);
+        print_filter(dateTotalSum);
 
         var minDate = dateDimInAgust.bottom(1)[0].created;
         var maxDate = dateDimInAgust.top(1)[0].created;
@@ -108,7 +108,7 @@
 //    mainChart
 //            .dimension(dateDim)
 //            .x(d3.time.scale().domain([minDate,maxDate]))
-//            .group(dateRevenueSum);
+//            .group(dateTotalSum);
 //
 
         var chart = dc.lineChart('#mainChart');
@@ -116,7 +116,7 @@
                 .width(4000)
                 .height(1600)
                 .dimension(dateDimInAgust)
-                .group(dateRevenueSum)
+                .group(dateTotalSum)
                 .x(d3.time.scale().domain([minDate,maxDate]));
 
         dc.renderAll();
@@ -127,21 +127,53 @@
 
         json.forEach(function(row){
             row.created = parseDate(row.created_timestamp);
+
+            var byDate = parseDate(row.created_timestamp);
+
+            byDate.setHours(0,0,0);
+
+            row.byDate = byDate;
         });
+
+        console.log(json[4]);
 
         var ndx = crossfilter(json);
 
-        var dateDim = ndx.dimension(function(d){return d.created;});
+        var dateDim = ndx.dimension(function(d){return d.byDate;});
 
-        var dateInAugust = dateDim.filterFunction(function(d){
-//            return d;
-            var month = d.getMonth() + 1;
-            if(month == 8){
-                return d;
-            }
+        //group lai theo ngay
+        var dateTotalSum = dateDim.group().reduceSum(function(d){
+            return d.total;
         });
 
-        print_filter(dateInAugust);
+
+//        console.log(dateTotalSum.top(10));
+
+        console.log(dateTotalSum.size());
+
+        var mainChart = dc.barChart('#mainChart');
+
+        minDate = dateDim.bottom(1)[0].byDate;
+        maxDate = dateDim.top(1)[0].byDate;
+
+        mainChart
+                .width(1000).height(400)
+                .dimension(dateDim)
+                .group(dateTotalSum)
+                .x(d3.scale.ordinal())
+//                .x(d3.time.scale().domain([minDate, maxDate]))
+                .xUnits(dc.units.ordinal)
+                .elasticX(true)
+                .elasticY(true)
+                .brushOn(true);
+
+        var weekendTotalChart = dc.pieChart('#weekendTotal');
+
+        
+        
+        
+        dc.renderAll();
+
 
 
     });
