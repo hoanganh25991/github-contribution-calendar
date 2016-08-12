@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>cross filter order</title>
+</head>
+<body>
+
+<div class="container">
+	<div id="chart-ring-year" style="width:300px; height:300px">
+		<div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
+			<a href="javascript:byYearChart.filterAll();dc.redrawAll();">reset</a>
+		</div>
+	</div>
+
+	<div id="chart-hist-spend" style="width:300px; height:300px">
+		<div class="reset" style="visibility: hidden;">range: <span class="filter"></span>
+			<a href="javascript:spendHistChart.filterAll();dc.redrawAll();">reset</a>
+		</div>
+	</div>
+
+	<div id="chart-row-spenders">
+		<div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
+			<a href="javascript:byDayChart.filterAll();dc.redrawAll();">reset</a>
+		</div>
+	</div>
+</div>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+<script type="text/javascript" src="js/d3.js"></script>
+<script type="text/javascript" src="js/crossfilter.js"></script>
+<script type="text/javascript" src="js/dc.js"></script>
+
+<script>
+$.getJSON("dump-order.json", function(json) {
+    // console.log(json); // this will show the info it in firebug console
+});
+var dump = [
+	{name: 'anh', age: 24, job: 'web', birthday: '1991-09-25', commits: 198},
+	{name: 'thinh', age: 25, job: 'ios', birthday: '1992-04-21', commits: 18},
+	{name: 'phat', age: 24, job: 'android', birthday: '1993-06-25', commits: 32},
+	{name: 'huy', age: 25, job: 'web', birthday: '1991-07-21', commits: 123},
+	{name: 'anh', age: 25, job: 'web', birthday: '1993-09-13', commits: 45}
+];
+
+dump.forEach(function(row){
+	var birthday = new Date(row.birthday);
+	// console.log(birthday);
+	row.year = birthday.getFullYear();
+	row.month = birthday.getMonth();
+	row.day = birthday.getDay();
+	console.log(row);
+});
+
+var dump2 = [];
+
+dump.forEach(function(row){
+	var row2 = {};
+	row2.year = row.year;
+	row2.month = row.month;
+	row2.day = row.day;
+	row2.commits = row.commits;
+	dump2.push(row2);	
+});
+
+var byYearChart   = dc.pieChart("#chart-ring-year"),
+	// byMonthChart  = dc.barChart("#chart-hist-spend"),
+	byDayChart = dc.rowChart("#chart-row-spenders");
+
+var filter = crossfilter(dump),
+// var filter = crossfilter(dump2),
+    yearDimension  = filter.dimension(function(row){return row.year});
+    monthDimension  = filter.dimension(function(row){return row.month});
+    dayDimension  = filter.dimension(function(row){return row.day});
+  
+    commitbyYear = yearDimension.group().reduceSum(function(d) {return +d.commits;}),
+    commitbyMonth = monthDimension.group().reduceSum(function(d) {return +d.commits;}),
+    commitbyDay = dayDimension.group().reduceSum(function(d) {return +d.commits;}),
+
+byYearChart
+    .dimension(yearDimension)
+    .group(commitbyYear)
+    // .innerRadius(50)
+    // .attr("x", 265 )
+    .controlsUseVisibility(true);
+
+// byMonthChart
+// 	.dimension(monthDimension)
+// 	.group(commitbyMonth)
+// 	.elasticX(true)
+// 	.controlsUseVisibility(true);
+
+byDayChart
+	.dimension(dayDimension)
+	.group(commitbyDay)
+	.elasticX(true)
+	.controlsUseVisibility(true);
+
+dc.renderAll();
+</script>
+</body>
+</html>
