@@ -2,28 +2,32 @@
 <html>
 <head>
     <title>order</title>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dc/1.7.5/dc.css">
 </head>
 <body>
 
 <div class="container">
     <div id="mainChart">
         <div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
-            <a href="javascript:mainChart.filterAll();dc.redrawAll();">reset</a>
+            <a href="javascript:dateDim.filterAll();dc.redrawAll();">reset</a>
         </div>
     </div>
 
-    <div id="weekendTotal">
+    <div id="weekendChart">
         <div class="reset" style="visibility: hidden;">range: <span class="filter"></span>
-            <a href="javascript:weekendTotalChart.filterAll();dc.redrawAll();">reset</a>
+            <a href="javascript:weekendChart.filterAll();dc.redrawAll();">reset</a>
         </div>
     </div>
 
-    <div id="chart-row-spenders">
+    <div id="weekendChart2" style="margin-left: 50px">
         <div class="reset" style="visibility: hidden;">selected: <span class="filter"></span>
-            <a href="javascript:byDayChart.filterAll();dc.redrawAll();">reset</a>
+            <a href="javascript:weekendChart2.filterAll();dc.redrawAll();">reset</a>
         </div>
     </div>
 </div>
+
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
 <script type="text/javascript" src="js/d3.js"></script>
 <script type="text/javascript" src="js/crossfilter.js"></script>
@@ -117,63 +121,121 @@
                 .height(1600)
                 .dimension(dateDimInAgust)
                 .group(dateTotalSum)
-                .x(d3.time.scale().domain([minDate,maxDate]));
+                .x(d3.time.scale().domain([minDate, maxDate]));
 
         dc.renderAll();
 
     };
+    var mainChart = {};
+    var dateDim = {};
 
-    $.getJSON("dump-order.json", function(json){
+    $.getJSON("dump-order-2.json", function(json){
 
+        //transform json
         json.forEach(function(row){
-            row.created = parseDate(row.created_timestamp);
+            //have to clone, prevent link between different filter
+            // Deep copy
+            var created = parseDate(row.created_timestamp);
 
-            var byDate = parseDate(row.created_timestamp);
+            row.created = created;
 
-            byDate.setHours(0,0,0);
+            //let
+            var date = created.getDate(),
+                    month = created.getMonth() + 1,
+                    year = created.getFullYear();
 
-            row.byDate = byDate;
+            //sort by date
+            row.date = Number((year * 365 + month * 31 + date));
+
+            //sort by month
+            row.month = year + "/" + month;
+
+            //sort by year
+            row.year = year;
+
+            //sort by weekend
+            //getDay 0 1 2 ... 6
+            // >>> sun mon tue ... sat
+            var dayInWeek = created.getDay();
+            //6 - sat, 0 - sun
+            row.weekend = 'weekday';
+            if(dayInWeek == 6 || dayInWeek == 0){
+                row.weekend = 'weekend';
+            }
+
+            var total = Number(row.total);
+//            row.total = Math.round( total * 1e2 ) / 1e2;
+            row.total = Math.floor(total);
+            row.pax = Number(row.pax);
         });
 
+//        console.log(json);
         console.log(json[4]);
+
+        mainChart = dc.barChart('#mainChart');
 
         var ndx = crossfilter(json);
 
-        var dateDim = ndx.dimension(function(d){return d.byDate;});
+        dateDim = ndx.dimension(function(d){
+            return d.date
+        });
 
-        //group lai theo ngay
-        var dateTotalSum = dateDim.group().reduceSum(function(d){
+        var totalByDate = dateDim.group().reduceSum(function(d){
+//            var total = Number(d.total);
+//            return total.toFixed(2);
             return d.total;
         });
 
+        console.log(totalByDate.top(5));
 
-//        console.log(dateTotalSum.top(10));
-
-        console.log(dateTotalSum.size());
-
-        var mainChart = dc.barChart('#mainChart');
-
-        minDate = dateDim.bottom(1)[0].byDate;
-        maxDate = dateDim.top(1)[0].byDate;
+        var minDate = dateDim.bottom(1)[0].date;
+        var maxDate = dateDim.top(1)[0].date;
 
         mainChart
-                .width(1000).height(400)
+                .width(1000)
+                .height(400)
                 .dimension(dateDim)
-                .group(dateTotalSum)
-                .x(d3.scale.ordinal())
-//                .x(d3.time.scale().domain([minDate, maxDate]))
-                .xUnits(dc.units.ordinal)
-                .elasticX(true)
-                .elasticY(true)
-                .brushOn(true);
+                .group(totalByDate)
+                .x(d3.scale.linear().domain([minDate,maxDate]));
+//                .x(d3.scale.ordinal())
+//                .xUnits(dc.units.ordinal);
+//                .elasticX();
 
-        var weekendTotalChart = dc.pieChart('#weekendTotal');
+//        mainChart.xAxis().tickFormat(function(d) {return d*10}); // convert back to base unit
 
-        
-        
-        
+
+        var weekendChart = dc.pieChart('#weekendChart');
+
+        var weekendDim = ndx.dimension(function(d){
+            return d.weekend;
+        });
+
+        var totalByWeekend = weekendDim.group().reduceSum(function(d){
+            return d.total;
+        });
+
+        weekendChart
+                .width(200)
+                .height(200)
+                .dimension(weekendDim)
+                .group(totalByWeekend)
+                .innerRadius(50);
+
+        var weekendChart2 = dc.pieChart('#weekendChart2');
+
+        var customerByWeekend = weekendDim.group().reduceSum(function(d){
+            return d.pax;
+        });
+
+        weekendChart2
+                .width(200)
+                .height(200)
+                .dimension(weekendDim)
+                .group(customerByWeekend)
+                .innerRadius(50);
+
+
         dc.renderAll();
-
 
 
     });
