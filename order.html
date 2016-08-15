@@ -99,7 +99,7 @@
         json.forEach(function(row){
             var created = new Date(row.created_timestamp * 1000);
 
-            row.date = Math.floor(row.created_timestamp / (24 * 60 * 60));
+//            row.date = Math.floor(row.created_timestamp / (24 * 60 * 60));
 
             //sort by month
 
@@ -108,15 +108,15 @@
             //sort by weekend
             //getDay 0 1 2 ... 6
             // >>> sun mon tue ... sat
-            var dayInWeek = created.getDay();
-            //6 - sat, 0 - sun
-            row.weekend = 'weekday';
-
-            if(dayInWeek == 6 || dayInWeek == 0){
-                row.weekend = 'weekend';
-            }
-
-            row.dummyGroup = 1;
+//            var dayInWeek = created.getDay();
+//            //6 - sat, 0 - sun
+//            row.weekend = 'weekday';
+//
+//            if(dayInWeek == 6 || dayInWeek == 0){
+//                row.weekend = 'weekend';
+//            }
+//
+//            row.dummyGroup = 1;
         });
 
         console.log(json[4]);
@@ -124,7 +124,7 @@
         var ndx = crossfilter(json);
 
         dateDim = ndx.dimension(function(d){
-            return d.date
+            return Math.floor(d.created_timestamp / (24 * 60 * 60));
         });
 
 
@@ -181,7 +181,15 @@
         var weekendChart = dc.pieChart('#weekendChart');
 
         var weekendDim = ndx.dimension(function(d){
-            return d.weekend;
+            var date = new Date(d.created_timestamp * 1000);
+
+            var day = date.getDay();
+
+            if(day == 0 || day == 6){
+                return 'weekend';
+            }
+
+            return 'weekday';
         });
 
         var totalByWeekend = weekendDim.group().reduceSum(function(d){
@@ -209,7 +217,7 @@
                 .innerRadius(50);
 
         var dummyGroup = ndx.dimension(function(d){
-            return d.dummyGroup
+            return 1;
         });
 
         totalOnRange = dummyGroup.group().reduceSum(function(d){
