@@ -204,22 +204,22 @@
 //        mainChart.xAxis().tickFormat(function(d) {return d*10}); // convert back to base unit
 
 
-        var weekendChart = dc.pieChart('#weekendChart');
-
-        var weekendDim = ndx.dimension(function(d){
-            return d.weekend;
-        });
-
-        var totalByWeekend = weekendDim.group().reduceSum(function(d){
-            return d.total;
-        });
-
-        weekendChart
-                .width(200)
-                .height(200)
-                .dimension(weekendDim)
-                .group(totalByWeekend)
-                .innerRadius(50);
+//        var weekendChart = dc.pieChart('#weekendChart');
+//
+//        var weekendDim = ndx.dimension(function(d){
+//            return d.weekend;
+//        });
+//
+//        var totalByWeekend = weekendDim.group().reduceSum(function(d){
+//            return d.total;
+//        });
+//
+//        weekendChart
+//                .width(200)
+//                .height(200)
+//                .dimension(weekendDim)
+//                .group(totalByWeekend)
+//                .innerRadius(50);
 
         var weekendChart2 = dc.pieChart('#weekendChart2');
 
