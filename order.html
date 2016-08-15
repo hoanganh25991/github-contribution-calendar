@@ -35,191 +35,76 @@
 
 <script>
     var parseDate = function(mysqlTimestamp){
-//    // Split timestamp into [ Y, M, D, h, m, s ]
-//    var t = mysqlTimestamp.split(/[- :]/);
-//
-//    // Apply each element to the Date function
-//    return new Date(Date.UTC(t[0], t[1]-1, t[2], t[3], t[4], t[5]));
-        var debug = d3.time.format('%Y-%m-%d %H:%M:%S').parse(mysqlTimestamp);
-//    var debug = d3.time.format('%Y-%m-%d').parse('2016-07-28');
-//    console.log(debug);
-        return debug;
+        return d3.time.format('%Y-%m-%d %H:%M:%S').parse(mysqlTimestamp);
     };
 
-    function print_filter(f){
-        if(typeof(f.length) != "undefined"){
-        }else{
-        }
-        if(typeof(f.top) != "undefined"){
-            f = f.top(Infinity);
-        }else{
-        }
-        if(typeof(f.dimension) != "undefined"){
-            f = f.dimension(function(d){
-                return "";
-            }).top(Infinity);
-        }else{
-        }
-        console.log("(" + f.length + ") = " + JSON.stringify(f).replace("[", "[\n\t").replace(/}\,/g, "},\n\t")
-                                                  .replace("]", "\n]"));
-    }
-
-    var allInOne = function(json){
-//    console.log(json); // this will show the info it in firebug console
-
-
-        json.forEach(function(row){
-            row.created = parseDate(row.created_timestamp);
-            let createdAt = row.created;
-//        let createdAt = parseDate(row.created_timestamp);
-
-            row.year = createdAt.getFullYear();
-
-            row.month = createdAt.getMonth() + 1;
-
-            row.date = createdAt.getDate();
-        });
-
-        let testRow = json[4];
-
-        console.log(testRow);
-
-        var ndx = crossfilter(json);
-
-//    print_filter(json);
-
-        var dateDim = ndx.dimension(function(d){
-            return d.created;
-        });
-
-        var dateDimInAgust = dateDim.filter(function(d){
-//            console.log(d);
-            if(d.getMonth() == 8){
-                return d;
-            }
-        });
-
-        var dateTotalSum = dateDimInAgust.group().reduceSum(function(d){
-            return Math.abs(d.total);
-        });
-
-        print_filter(dateTotalSum);
-
-        var minDate = dateDimInAgust.bottom(1)[0].created;
-        var maxDate = dateDimInAgust.top(1)[0].created;
-
-//    var mainChart = dc.barChart('#mainChart');
-//    mainChart
-//            .dimension(dateDim)
-//            .x(d3.time.scale().domain([minDate,maxDate]))
-//            .group(dateTotalSum);
-//
-
-        var chart = dc.lineChart('#mainChart');
-        chart
-                .width(4000)
-                .height(1600)
-                .dimension(dateDimInAgust)
-                .group(dateTotalSum)
-                .x(d3.time.scale().domain([minDate, maxDate]));
-
-        dc.renderAll();
-
-    };
     var mainChart = {};
     var dateDim = {};
 
-    $.getJSON("dump-order-2.json", function(json){
+    var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+    $.getJSON("dump-order-4.json", function(json){
         //transform json
-        json.forEach(function(row){
-            //have to clone, prevent link between different filter
-            // Deep copy
-            var created = parseDate(row.created_timestamp);
-
-            row.created = created;
-
-            //let
-            var date = created.getDate(),
-                    month = created.getMonth() + 1,
-                    year = created.getFullYear();
-
-            //sort by date
-            row.date = Number((year * 365 + month * 31 + date));
-
-            //sort by month
-            row.month = year + "/" + month;
-
-            //sort by year
-            row.year = year;
-
-            //sort by weekend
-            //getDay 0 1 2 ... 6
-            // >>> sun mon tue ... sat
-            var dayInWeek = created.getDay();
-            //6 - sat, 0 - sun
-            row.weekend = 'weekday';
-            if(dayInWeek == 6 || dayInWeek == 0){
-                row.weekend = 'weekend';
-            }
-
-            var total = Number(row.total);
-//            row.total = Math.round( total * 1e2 ) / 1e2;
-            row.total = Math.floor(total);
-            row.pax = Number(row.pax);
+        json.forEach(function(d){
+            d.total = Math.floor(d.total);
         });
-
-//        console.log(json);
-        console.log(json[4]);
 
         mainChart = dc.barChart('#mainChart');
 
         var ndx = crossfilter(json);
 
         dateDim = ndx.dimension(function(d){
-            return d.date
+            d.days = Math.floor(d.created / (24 * 60 ^ 60));
+            return d.days;
         });
 
         var totalByDate = dateDim.group().reduceSum(function(d){
-//            var total = Number(d.total);
-//            return total.toFixed(2);
             return d.total;
         });
 
-        console.log(totalByDate.top(5));
+        var minDate = totalByDate.bottom(1)[0].key;
+        var maxDate = totalByDate.top(1)[0].key;
 
-        var minDate = dateDim.bottom(1)[0].date;
-        var maxDate = dateDim.top(1)[0].date;
+        mainChart
+                .width(1000)
+                .height(400)
+                .dimension(dateDim)
+                .group(totalByDate)
+                .x(d3.scale.linear().domain([minDate, maxDate]));
 
-//        mainChart
-//                .width(1000)
-//                .height(400)
-//                .dimension(dateDim)
-//                .group(totalByDate)
-//                .x(d3.scale.linear().domain([minDate,maxDate]));
-//                .x(d3.scale.ordinal())
-//                .xUnits(dc.units.ordinal);
-//                .elasticX();
+        mainChart.xAxis().tickFormat(function(d){
+            var timestamp = d * (24 * 60 * 60);
+            var date = new Date(timestamp * 1000);
+            return date.getFullYear() + '-' + monthNames[date.getMonth()] + '-' + date.getDate();
+        });
 
-//        mainChart.xAxis().tickFormat(function(d) {return d*10}); // convert back to base unit
+        var weekendChart = dc.pieChart('#weekendChart');
 
+        var weekendDim = ndx.dimension(function(d){
+            var date = new Date(d * 1000);
 
-//        var weekendChart = dc.pieChart('#weekendChart');
-//
-//        var weekendDim = ndx.dimension(function(d){
-//            return d.weekend;
-//        });
-//
-//        var totalByWeekend = weekendDim.group().reduceSum(function(d){
-//            return d.total;
-//        });
-//
-//        weekendChart
-//                .width(200)
-//                .height(200)
-//                .dimension(weekendDim)
-//                .group(totalByWeekend)
-//                .innerRadius(50);
+            var dayInWeek = date.getDay();
+
+            d.weekend = 'weekday';
+
+            if(dayInWeek == 0 || dayInWeek == 6){
+                d.weekend = 'weekend';
+            }
+
+            return d.weekend;
+        });
+
+        var totalByWeekend = weekendDim.group().reduceSum(function(d){
+            return d.total;
+        });
+
+        weekendChart
+                .width(200)
+                .height(200)
+                .dimension(weekendDim)
+                .group(totalByWeekend)
+                .innerRadius(50);
 
         var weekendChart2 = dc.pieChart('#weekendChart2');
 
