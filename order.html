@@ -23,15 +23,20 @@
                 </div>
 
                 <div class="row">
-                    <h1>count order / date </h1>
-                    <div id="orderChart"></div>
+                    <h1>count order / hour</h1>
+                    <div id="orderHourChart"></div>
                 </div>
 
-                <div class="row">
-                    <h1>average total-order / date</h1>
-                    <div id="totalOrderChart"></div>
-                </div>
-                
+                <!--<div class="row">-->
+                <!--<h1>count order / date </h1>-->
+                <!--<div id="orderChart"></div>-->
+                <!--</div>-->
+
+                <!--<div class="row">-->
+                <!--<h1>average total-order / date</h1>-->
+                <!--<div id="totalOrderChart"></div>-->
+                <!--</div>-->
+
             </div>
 
         </div>
@@ -48,12 +53,22 @@
         </div>
 
         <div class="row">
-            <h1>total on range</h1>
-            <div id="totalChart"></div>
-            <div id="totalOnRangeChart"></div>
-            <!--<div id="totalOnRangeChart">-->
-                <!--{{ totalOnRange }}-->
-            <!--</div>-->
+            <!--<h1>total on range</h1>-->
+            <!--<div id="totalChart"></div>-->
+            <!--<div id="totalOnRangeChart"></div>-->
+            <div id="analysis">
+                <h1>Analysis</h1>
+                <h3><strong>&Sigma; total:</strong>
+                    <span class="label label-default">{{ Math.floor(totalOnRange.value) }}</span>
+                </h3>
+                <h3><strong>&Sigma; order: </strong>
+                    <span class="label label-default">{{ Math.floor(orderOnRange.value) }}</span>
+                </h3>
+                <h3><strong>total/order: </strong>
+                    <span class="label label-default">{{ Math.floor(totalOnRange.value / orderOnRange.value) }}</span>
+                </h3>
+
+            </div>
         </div>
     </div>
 </div>
@@ -63,14 +78,11 @@
 <script type="text/javascript" src="js/crossfilter.js"></script>
 <script type="text/javascript" src="js/reductio.min.js"></script>
 <script type="text/javascript" src="js/dc.js"></script>
+<script type="text/javascript" src="js/vue.min.js"></script>
 
 <script>
-    //timestamp 2016-07-28 13:48:54
-    //    var parseDate = function(timestamp){
-    //        return d3.time.format('%Y-%m-%d %H:%M:%S').parse(timestamp);
-    //    };
-
     var mainChart = {};
+
     var dateDim = {};
 
     var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -78,13 +90,16 @@
 
     var totalOnRange = {};
 
-    $.getJSON("dump-order-4.json", function(json){
+    var orderOnRange = {};
+
+    var vm;
+
+    $.getJSON("dump-order-5.json", function(json){
         //transform json
         json.forEach(function(row){
-            //row.created is timestamp, 1476876234 (second)
-            var created = new Date(row.created * 1000);
+            var created = new Date(row.created_timestamp * 1000);
 
-            row.date = Math.floor(row.created / (24 * 60 * 60));
+            row.date = Math.floor(row.created_timestamp / (24 * 60 * 60));
 
             //sort by month
 
@@ -101,16 +116,10 @@
                 row.weekend = 'weekend';
             }
 
-            row.total = Math.floor(Number(row.total));
-
-            row.pax = Number(row.pax);
-
             row.dummyGroup = 1;
         });
 
         console.log(json[4]);
-
-        mainChart = dc.barChart('#mainChart');
 
         var ndx = crossfilter(json);
 
@@ -118,13 +127,21 @@
             return d.date
         });
 
+
+//        mainChart = dc.barChart('#mainChart');
+        mainChart = dc.lineChart('#mainChart');
+//        mainChart = dc.compositeChart('#mainChart');
+
         var totalByDate = dateDim.group().reduceSum(function(d){
             return d.total;
         });
 
-        console.log(totalByDate.top(5));
+        var orderByDate = dateDim.group().reduceCount(function(d){
+            return d.id;
+        });
 
         var minDate = dateDim.bottom(1)[0].date;
+
         var maxDate = dateDim.top(1)[0].date;
 
         mainChart
@@ -132,7 +149,27 @@
                 .height(400)
                 .dimension(dateDim)
                 .group(totalByDate)
-                .x(d3.scale.linear().domain([minDate, maxDate]));
+                .brushOn(true)
+                .elasticX(true)
+                .elasticY(true)
+                .x(d3.scale.linear().domain([minDate, maxDate]))
+        ;
+//        mainChart
+//                .width(1000)
+//                .height(400)
+//                .dimension(dateDim)
+//                .brushOn(true)
+//                .valueAccessor(function(d){
+//                    return d.value;
+//                })
+//                .elasticY(true)
+//                .x(d3.scale.linear().domain([minDate, maxDate]))
+//                //                .y(d3.scale.linear().domain([0, 10]))
+//                .compose([
+//                    dc.lineChart(mainChart).group(totalByDate),
+//                    dc.lineChart(mainChart).group(orderByDate),
+//                ])
+//        ;
 
         mainChart.xAxis().tickFormat(function(d){
             var timestamp = d * (24 * 60 * 60);
@@ -171,96 +208,55 @@
                 .group(customerByWeekend)
                 .innerRadius(50);
 
+        var dummyGroup = ndx.dimension(function(d){
+            return d.dummyGroup
+        });
 
-        var orderChart = dc.rowChart('#orderChart');
+        totalOnRange = dummyGroup.group().reduceSum(function(d){
+            return d.total
+        });
 
-        var countByDate = dateDim.group().reduceCount(function(d){
+        orderOnRange = dummyGroup.group().reduceCount(function(d){
+            return d.id
+        });
+
+//        var objTotalOnRange = totalOnRange.top(1);
+//        var objOrderOnRange = orderOnRange.top(1);
+
+        vm = new Vue({
+            el: '#analysis',
+            data: {
+                totalOnRange: totalOnRange.top(1)[0],
+                orderOnRange: orderOnRange.top(1)[0]
+            },
+
+            ready: function(){
+
+            }
+        });
+
+        var orderHourChart = dc.barChart('#orderHourChart');
+
+        var hourDim = ndx.dimension(function(d){
+            var date = new Date(d.created_timestamp * 1000);
+            return date.getHours();
+        });
+
+        var orderByHour = hourDim.group().reduceCount(function(d){
             return d.id;
         });
 
-        orderChart
+        window.d = orderByHour;
+
+        orderHourChart
                 .width(1000)
                 .height(400)
-                .dimension(dateDim)
-                .group(countByDate)
-                .elasticX(true)
-                .controlsUseVisibility(true);
-//                .x(d3.scale.linear().domain([minDate, maxDate]));
-
-
-//        var orderChart = dc.barChart('#orderChart');
-//
-//        var countByDate = dateDim.group().reduceCount(function(d){
-//            return d.id;
-//        });
-//
-//        orderChart
-//                .width(1000)
-//                .height(400)
-//                .dimension(dateDim)
-//                .group(countByDate)
-//                .x(d3.scale.linear().domain([minDate, maxDate]));
-//        orderChart.xAxis().tickFormat(function(d){
-//            var timestamp = d * (24 * 60 * 60);
-//            var date = new Date(timestamp * 1000);
-//            return date.getFullYear() + '-' + monthNames[date.getMonth()] + '-' + date.getDate();
-//        }); // convert back to date string 2016-Aug-15
-
-
-        var totalOrderChart = dc.barChart('#totalOrderChart');
-
-        var totalOrderAverage = dateDim.group();
-
-        var reducer = reductio()
-                .count(true)
-                .sum(function(d){
-                    return d.total;
-                })
-                .avg(true);
-        // <--> the same
-//        var reducer = reductio()
-//                .avg(function(d){return +d.total;});
-
-        reducer(totalOrderAverage);
-
-        totalOrderChart
-                .width(1000)
-                .height(400)
-                .dimension(dateDim)
-                .group(totalOrderAverage)
-                .valueAccessor(function(d){
-                    return d.value.avg;
-                })
-                .x(d3.scale.linear().domain([minDate, maxDate]));
-
-        totalOrderChart.xAxis().tickFormat(function(d){
-            var timestamp = d * (24 * 60 * 60);
-            var date = new Date(timestamp * 1000);
-            return date.getFullYear() + '-' + monthNames[date.getMonth()] + '-' + date.getDate();
-        }); // convert back to date string 2016-Aug-15
-
-
-//        var totalChart = dc.rowChart('#totalChart');
-//        var total = dateDim.groupAll().reduceSum(function(d){return d.total}).value();
-//        var obj = {key: 1, value: total};
-//        totalChart
-//                .width(200)
-//                .height(400)
-
-
-        var totalOnRangeChart = dc.rowChart('#totalOnRangeChart');
-
-        var dummyGroup = ndx.dimension(function(d){return d.dummyGroup});
-
-        totalOnRange = dummyGroup.group().reduceSum(function(d){return d.total});
-
-        totalOnRangeChart
-                .width(400)
-                .height(100)
-                .dimension(dummyGroup)
-                .group(totalOnRange)
-                .elasticX(true)
-                .controlsUseVisibility(true);
+                .dimension(hourDim)
+                .group(orderByHour)
+                .brushOn(true)
+                .elasticY(true)
+                .x(d3.scale.linear().domain([8, 23]))
+        ;
 
         dc.renderAll();
 
