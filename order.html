@@ -28,6 +28,11 @@
                     <div id="orderHourChart"></div>
                 </div>
 
+                <div class="row">
+                    <h1>count order / hour</h1>
+                    <div id="orderHourOfDateChart"></div>
+                </div>
+
                 <!--<div class="row">-->
                 <!--<h1>count order / date </h1>-->
                 <!--<div id="orderChart"></div>-->
@@ -269,6 +274,78 @@
                 .elasticY(true)
                 .x(d3.scale.linear().domain([8, 23]))
         ;
+
+        var hourOfDate = ndx.dimension(function(d){
+            var date = Math.floor(d.created_timestamp / (24 * 60 * 60));
+            var hour = new Date(d.created_timestamp * 1000).getHours();
+            return [hour, date];
+        });
+
+        var orderHourOfDate = hourOfDate.group().reduceCount(function(d){
+            return d.id;
+        });
+
+
+        var orderRange = [0, 20];
+
+        var heatColorMapping = function(d){
+            return d3.scale.linear().domain(orderRange).range(["white", '#002b53'])(d);
+        };
+
+        heatColorMapping.domain = function(){
+            return orderRange;
+        };
+
+        var orderHourOfDateChart = dc.heatMap('#orderHourOfDateChart');
+
+        var hourCollection = [];
+
+        orderHourOfDateChart
+                .width(1000)
+                .height(600)
+                .xBorderRadius(0)
+                .yBorderRadius(0)
+                .dimension(hourOfDate)
+                .group(orderHourOfDate)
+                .keyAccessor(function(d){
+//                    var timestamp = d.key[1] * (24 * 60 * 60); // d * (24 * 60 * 60);
+//                    var date = new Date(timestamp * 1000);
+////                    return date.getFullYear() + '-' + monthNames[date.getMonth()] + '-' + date.getDate();
+//                    return monthNames[date.getMonth()] + '-' + date.getDate();
+                    return d.key[1];
+                })
+                .valueAccessor(function(d){
+                    hourCollection.push(d.key[0]);
+                    return d.key[0];
+                })
+                .colorAccessor(function(d){
+                    return +d.value;
+                })
+                .title(function(d){
+                    var date = new Date(d.key[0] * (24 * 60 * 60));
+                    var dateTitle = date.getFullYear() + '-' + monthNames[date.getMonth()] + '-' + date.getDate();
+                    return " Date:   " + dateTitle + "\n" +
+                            "  Hour:   " + d.key[1] + "\n" +
+                            "  Σ Order:   " + d.value;
+                })
+                .colors(heatColorMapping)
+                .calculateColorDomain();
+
+        window.debug = orderHourOfDateChart;
+
+        orderHourOfDateChart.colsLabel(function(d){//d = 16782
+            var timestamp = d * (24 * 60 * 60); // d * (24 * 60 * 60);
+            var date = new Date(timestamp * 1000);
+//                    return date.getFullYear() + '-' + monthNames[date.getMonth()] + '-' + date.getDate();
+            return monthNames[date.getMonth()] + '-' + date.getDate();
+        });
+//        tickFormat(function(d){
+//            var timestamp = d * (24 * 60 * 60);
+//            var date = new Date(timestamp * 1000);
+//            return date.getFullYear() + '-' + monthNames[date.getMonth()] + '-' + date.getDate();
+//        }); // convert back to date string 2016-Aug-15
+
+        console.log(hourCollection);
 
         dc.renderAll();
 
